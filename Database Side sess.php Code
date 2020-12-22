@@ -1,0 +1,28 @@
+if(isset($_SESSION['type'])) /*if type has value then load value 
+into variable*/ 
+ { 
+ $type = $_SESSION['type']; 
+ $user = $_SESSION['user']; 
+ if ($type == 'senior') 
+ {
+include 
+'/var/www/html/monitor/tools/db_connections/dbsenior_monitor.php'; 
+ } 
+ else if ($type == 'junior') 
+ { 
+ include 
+'/var/www/html/monitor/tools/db_connections/dbjunior_monitor.php'; 
+ } 
+ else if ($type == 'view') 
+ { 
+ include 
+'/var/www/html/monitor/tools/db_connections/dbview_only.php'; 
+ } 
+ } 
+ else 
+ { 
+ echo '<meta http-equiv="refresh" content="2; 
+URL=index.php">'; 
+ die('error you are not logged in'); 
+ } 
+ //$table = $_SESSION['table'];
