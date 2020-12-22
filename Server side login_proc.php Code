@@ -1,0 +1,98 @@
+//login_proc.php to login 
+ // sess.php for session data and db connection 
+ //url on successfull redirect 
+ $url = 'portal.php'; 
+ //include session 
+ include 'tools/login/login_sess.php'; //starts the session 
+ //check to see if username or password was left blank 
+ if(empty($_POST['username'])) 
+ { 
+ echo '<meta http-equiv="refresh" content="2; URL=monitor.php">'; 
+ die('username blank'); 
+ } 
+ if(empty($_POST['password'])) 
+ { 
+ echo '<meta http-equiv="refresh" content="2; 
+URL=monitor.php">';
+die('password blank'); 
+ } 
+ /*This is the new way to conenct to mysql as compared to the methods 
+used in*/ 
+ // /var/www/html/monitor/tools/db_connections_dbuser.php 
+ $login = mysqli_connect("localhost", "login", "i08836v97KuPE1c"); 
+ mysqli_select_db('phpuser', $login); 
+ //and the new way to scrub input 
+ $un = mysqli_real_escape_string($login 
+,htmlspecialchars($_POST['username'])); 
+ $pw = 
+mysqli_real_escape_string($login,htmlspecialchars($_POST['password'])); 
+ //the new way to disconnect from mysql 
+ mysqli_close($login); 
+ //include the connection to the users table 
+ include 'tools/db_connections/dbuser.php'; 
+ //get all users from database 
+ $uresult = mysql_query("select username from user"); 
+ //close connection to user database 
+ mysql_close($login); 
+ //check to see if input matches existing user 
+ while ($users = mysql_fetch_row($uresult))
+{ 
+ //check if username exists in database 
+ if ($users[0] == $un) 
+ { 
+/*check for login attempts ## consider moving this out of loop to get ALL 
+attempts!!! */ 
+ //include attempt.php page 
+ include 'tools/login/attempt.php'; 
+ //calls attempt function given username 
+ $check = attempt($users[0]); 
+ //if too many bad attempts have been made 
+ if ($check == false) 
+ { 
+ echo '<meta http-equiv="refresh" content="2; 
+URL=index.php">'; 
+ die('too many login attempts'); 
+ } 
+ //#######grab password list### connect to user database 
+ include 'tools/db_connections/dbuser.php'; 
+//get password given confirmed username(not using direct input form user)
+$result = mysql_query("select username, user_type, 
+password as 'pw' from user where username = '$users[0]'") or 
+die(mysql_error()); 
+ $array_r = mysql_fetch_array($result); 
+ //close user db connection 
+ mysql_close($login); 
+/*########if user and pass match, initilize session and proceed#######*/ 
+ //recreate hash using password 
+ $hash = crypt($pw, $array_r['pw']); 
+ //check to see if hashes match 
+ if ($hash == $array_r['pw']) 
+ { /*passwords match then create session and set 
+variables*/ 
+ $type = $array_r['user_type']; 
+ $uname = $array_r['username']; 
+ $_SESSION['type'] = $type; 
+ $_SESSION['user'] = $uname; 
+ echo '<meta http-equiv="refresh" content="0; 
+URL='.$url.'">'; 
+ } 
+ /*if the passwords dont match then log the attempt, kill the 
+page, and redirect*/
+else 
+ { 
+ include 'tools/db_connections/dbattempt.php'; 
+ $check = addattempt($users[0]); 
+ echo '<meta http-equiv="refresh" content="2; 
+URL=index.php">'; 
+ die('bad password'); 
+ mysql_close($attmpt); 
+ } 
+ } 
+ } 
+ //else bad username 
+ /*include 'tools/db_connections/dbattempt.php'; 
+ $check = addattempt($users[0]); 
+ mysql_close($attmpt);*/ 
+ echo '<meta http-equiv="refresh" content="2; URL=index.php">'; 
+ die('bad username'); 
+?>
