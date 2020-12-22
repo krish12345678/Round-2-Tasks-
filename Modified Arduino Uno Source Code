@@ -1,0 +1,84 @@
+#include <math.h> 
+#include <SPI.h> 
+#include <Ethernet.h> 
+//Schematic: 
+// [Ground] ---- [10k-Resister] -------|------- [10k-Thermistor] ---- [+5v] 
+// | 
+// Analog Pin 0 
+//This is the pin the thermistor is on 
+#define ThermistorPIN 0 
+//Use these variables to tune the thermistor calculations 
+//uses the Steinhart-Hart equation 
+#define THERM_A 0.00001129148 
+#define THERM_B 0.00073990070 
+#define THERM_C 0.00090080019 
+//Output temp in Farenheit 
+char TempMode = ‘F’; 
+byte mac[] = { 
+ 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED }; 
+IPAddress ip(192,168,1,80); 
+EthernetServer server(80); 
+double Thermistor(int RawADC) {
+long Resistance; 
+ double Temp; 
+ Resistance=((10240000/RawADC) – 1000); 
+ Temp = log(Resistance); 
+ Temp = 1/ (THERM_A + (THERM_B * Temp) + (THERM_C * Temp * Temp * 
+Temp)); 
+ Temp = Temp – 273.15; 
+ //Temp is now the temperature in Celsius 
+ return Temp; 
+} 
+double GetTemp() 
+{ 
+ double temp; 
+ temp = Thermistor(analogRead(ThermistorPIN)); 
+ if(TempMode == ‘C’) //if we want celcius 
+ { 
+ return temp; 
+ }else{ 
+ temp = (temp * 9.0)/ 5.0 + 32.0; 
+ return temp; 
+ } 
+}
+void setup() { 
+ Serial.begin(9600); 
+ Ethernet.begin(mac, ip); 
+ server.begin(); 
+ Serial.print(“Server is at “); 
+ Serial.println(Ethernet.localIP()); 
+} 
+void loop() { 
+ EthernetClient client = server.available(); 
+ if (client) { 
+ Serial.println(“new client”); 
+ boolean currentLineIsBlank = true; 
+ while(client.connected()){ 
+ if(client.available()) { 
+ char c = client.read(); 
+ Serial.writeI; 
+ if(c == ‘\n’ && currentLineIsBlank) { 
+ client.println(“HTTP/1.1 200 OK”); 
+ client.println(“Content-Type: text/html”); 
+ client.println(“Connection: close”);// the connection will be closed after 
+completion of the response 
+ client.println(“Refresh: 5”); // refresh the page automatically every 5 sec
+client.println(); 
+ client.println(“<!DOCTYPE HTML>”); 
+ client.println(“<html>”); 
+ client.println(GetTemp()); 
+ client.println(“</html>”); 
+ break; 
+ } 
+ if(c == ‘\n’) { 
+ currentLineIsBlank = true; 
+ }else if(c != ‘\r’) { 
+ currentLineIsBlank = false; 
+ } 
+ } 
+ } 
+ delay(1); 
+ client.stop(); 
+ Serial.println(“Client Disconnected”); 
+ } 
+}
